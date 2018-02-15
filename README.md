@@ -4,7 +4,7 @@ Simple web crawler to count people in futurenet.club.
 
 ### Prerequisites
 
-JDK, JDBC mysql module, mysql database on localhost.
+JDK, JDBC mysql module, mysql database "futurenet" on localhost.
 
 ### Description
 

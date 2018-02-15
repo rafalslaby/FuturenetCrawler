@@ -50,7 +50,7 @@ public class FuturenetCrawler {
             try {
                 page = HttpHandler.getHtmlFromURL(url);
             }
-            catch (SocketTimeoutException e){
+            catch (SocketTimeoutException | UnknownHostException e){
                 Logger.log("Request timeout number" + timeoutsCounter + " : " + e);
                 if(++timeoutsCounter < maxTimeouts) {
                     Thread.sleep(1000 * sleepSecondsAfterTimeout);

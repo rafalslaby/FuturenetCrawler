@@ -6,71 +6,100 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class FuturenetCrawler {
-    FuturenetDatabase db = new FuturenetDatabase();
-    private final String login = "kajak22";
-    private final String password = "javaIsBetterThanC++11";
+    FuturenetDatabase db;
+    volatile boolean stop;
 
-    void login() throws IOException{
-        HttpHandler.enableCookieStoring();
-        HttpURLConnection con = (HttpURLConnection) new URL("http://kajak22.futurenet.club/postLogin")
-                .openConnection();
-        Map<String,String> parameters = new LinkedHashMap<>();
-        parameters.put("login", login);
-        parameters.put("password",password);
-        HttpHandler.sendPost(con,parameters);
-        HttpHandler.handleRedirecting(con);
+    final Thread consoleListener = new Thread(){
+        @Override
+        public void run() {
+            try {
+                BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+                while(true){
+                    if(br.readLine().equals("q")) {
+                        stop = true;
+                        break;
+                    }
+                }
+            } catch (IOException e) {
+                Logger.log("Console listener error");
+            }
+        }
+    };
+
+    FuturenetCrawler(String column, String asc_desc){
+        db = new FuturenetDatabase(column, asc_desc);
+    }
+
+    void login(String login, String password){
+        try {
+            HttpHandler.enableCookieStoring();
+            HttpURLConnection con = (HttpURLConnection) new URL("http://kajak22.futurenet.club/postLogin")
+                    .openConnection();
+            Map<String,String> parameters = new LinkedHashMap<>();
+            parameters.put("login", login);
+            parameters.put("password",password);
+            HttpHandler.sendPost(con,parameters);
+            HttpHandler.handleRedirecting(con);
+        } catch (IOException e){
+            System.out.println("Couldn't log in");
+            System.exit(1);
+        }
     }
 
     void crawl(int limit, int sleepSeconds, int sleepSecondsAfterTimeout, int maxTimeouts)
-            throws SQLException, InterruptedException{
+    {
+        consoleListener.start();
         int timeoutsCounter = 0;
-        try {
-            db.connect();
-        }
-        catch(ClassNotFoundException e){
-            Logger.log("Can't find jdbc modules: " + e);
-        }
-        catch(SQLException e){
-            Logger.log("Database error: " + e);
-        }
         if(limit == -1){
             limit = Integer.MAX_VALUE;
         }
-        if(sleepSeconds != -1){
-            Thread.sleep(sleepSeconds*1000);
-        }
-        for (int i =0;i<limit;i++){
-            //System.out.println(i);
-            String rootLabel = db.getNextUnvisited();
-            if(rootLabel == null)
-                break;
-            Logger.log(rootLabel);
-            String url = Person.getFriendsListLink(rootLabel);
-            String page = "";
-            try {
-                page = HttpHandler.getHtmlFromURL(url);
+        try {
+            if(sleepSeconds != -1){
+                Thread.sleep(sleepSeconds*1000);
             }
-            catch (SocketTimeoutException | UnknownHostException e){
-                Logger.log("Request timeout number" + timeoutsCounter + " : " + e);
-                if(++timeoutsCounter < maxTimeouts) {
-                    Thread.sleep(1000 * sleepSecondsAfterTimeout);
+            for (int i =0;i<limit;i++){
+
+                if(stop) {
+                    Logger.log("Stopped by the user");
+                    break;
                 }
-                else {
-                    Logger.log("Too many timeouts");
-                    System.exit(1);
+
+                //System.out.println(i);
+                String rootLabel = db.getNextUnvisited();
+                if(rootLabel == null)
+                    break;
+                Logger.log(rootLabel);
+                String url = Person.getFriendsListLink(rootLabel);
+                String page = "";
+                try {
+                    page = HttpHandler.getHtmlFromURL(url);
+                }
+                catch (SocketTimeoutException | UnknownHostException e){
+                    Logger.log("Request timeout number" + timeoutsCounter + " : " + e);
+                    if(++timeoutsCounter < maxTimeouts) {
+                        Thread.sleep(1000 * sleepSecondsAfterTimeout);
+                    }
+                    else {
+                        Logger.log("Too many timeouts");
+                        System.exit(1);
+                    }
+                }
+                catch (IOException e) {
+                    Logger.log("Link Error: " + e);
+                    db.setInvalidLink(rootLabel);
+                    continue;
+                }
+                timeoutsCounter = 0;
+                try {
+                    db.insertPersons(pageToPersonList(page),rootLabel);
+                } catch(SQLException e){
+                    Logger.log("Insertion error: " + e);
                 }
             }
-            catch (IOException e) {
-                Logger.log("Link Error: " + e);
-                db.setInvalidLink(rootLabel);
-                continue;
-            }
-            timeoutsCounter = 0;
-            try {
-                db.insertPersons(pageToPersonList(page),rootLabel);
-            } catch(SQLException e){
-                Logger.log("Insertion error: " + e);
-            }
+        } catch (InterruptedException e) {
+            Logger.log("Interrupted during sleep: " + e);
+        } catch (SQLException e) {
+            Logger.log("Database error: " + e);
         }
     }
 
@@ -116,27 +145,17 @@ public class FuturenetCrawler {
 
     public static void main(String args[]){
         System.setProperty("file.encoding","UTF-8");
-        System.out.println(System.getProperty("file.encoding"));
-        FuturenetCrawler crawler = new FuturenetCrawler();
-
-        try{
-            Logger.initializeLogFile();
-        } catch (IOException e){
-            System.err.println("Couldn't create error log: " + e);
-            return;
+        if(args.length < 4){
+            System.out.println("Parameters: login password column asc/desc");
+            System.exit(1);
         }
-        try {
-            crawler.login();
-        } catch (IOException e){
-            Logger.log("Couldn't log in: " + e);
-            return;
+        if(!args[3].equals("asc") && !args[3].equals("desc")) {
+            System.out.println("4. parameter must be desc or asc");
+            System.exit(1);
         }
-        try{
-            crawler.crawl(-1,-1,60,5);
-        } catch (SQLException e){
-            Logger.log("Database error: " + e);
-        } catch (InterruptedException e){
-            Logger.log("Interrupted during sleep: " + e);
-        }
+        Logger.initializeLogFile();
+        FuturenetCrawler crawler = new FuturenetCrawler(args[2],args[3]);
+        crawler.login(args[0],args[1]);
+        crawler.crawl(-1,-1,60,5);
     }
 }

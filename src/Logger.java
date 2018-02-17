@@ -8,15 +8,21 @@ import java.time.LocalDateTime;
 import java.util.Calendar;
 
 class Logger {
-    static void initializeLogFile() throws IOException  {
+    static void initializeLogFile(){
+
         String timeStamp = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss")
                 .format(Calendar.getInstance().getTime());
-        if(Files.notExists(Paths.get("log"))) {
-            Files.createDirectory(Paths.get("log"));
+        try {
+            if(Files.notExists(Paths.get("log"))) {
+                Files.createDirectory(Paths.get("log"));
+            }
+            String fileName ="log/" + timeStamp + ".txt";
+            FileOutputStream f = new FileOutputStream(fileName);
+            System.setErr(new PrintStream(f));
+        } catch (IOException e) {
+            System.out.println("Couldn't initialize log file");
+            System.exit(1);
         }
-        String fileName ="log/" + timeStamp + ".txt";
-        FileOutputStream f = new FileOutputStream(fileName);
-        System.setErr(new PrintStream(f));
     }
 
     static void log(String message){

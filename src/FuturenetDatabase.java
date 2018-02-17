@@ -1,8 +1,43 @@
 import java.sql.*;
+import java.util.Arrays;
 import java.util.List;
 
 class FuturenetDatabase {
     private Connection connect;
+    private String getNextQuery;
+
+    FuturenetDatabase(String columnName, String order) {
+        try{
+            connect();
+            if(checkColumnName(columnName))
+                this.getNextQuery = "select label from profil where visited = 0" +
+                        " order by " + columnName + " " + order + " limit 1";
+            else{
+                System.out.println("No such column");
+                System.exit(1);
+            }
+        } catch(ClassNotFoundException e){
+            System.out.println("No jdbc driver");
+            System.exit(1);
+        } catch(SQLException e){
+            System.out.println("Couldn't connect to database");
+            System.exit(1);
+        }
+    }
+
+    FuturenetDatabase(){
+        //System.setProperty("file.encoding","UTF-8");
+        getNextQuery = "select label from profil where visited = 0 limit 1";
+        try {
+            connect();
+        } catch(ClassNotFoundException e){
+            System.out.println("No jdbc driver");
+            System.exit(1);
+        } catch(SQLException e){
+            System.out.println("Couldn't connect to database");
+            System.exit(1);
+        }
+    }
 
     void connect() throws ClassNotFoundException, SQLException {
         // This will load the MySQL driver, each DB has its own driver
@@ -49,7 +84,8 @@ class FuturenetDatabase {
 
     String getNextUnvisited() throws SQLException {
         Statement statement = connect.createStatement();
-        ResultSet resultSet = statement.executeQuery("select label from profil where visited = 0 limit 1");
+        //ResultSet resultSet = statement.executeQuery("select label from profil where visited = 0 limit 1");
+        ResultSet resultSet = statement.executeQuery(getNextQuery);
         if (resultSet.next())
             return resultSet.getString("label");
         else
@@ -73,5 +109,30 @@ class FuturenetDatabase {
         pst.setString(1, label);
         pst.executeUpdate();
         connect.commit();
+    }
+
+    void queryTest(String query) throws SQLException{
+        Statement st = connect.createStatement();
+        ResultSet rst = st.executeQuery(query);
+        ResultSetMetaData meta = rst.getMetaData();
+        for(int i = 0;i < meta.getColumnCount(); i++){
+            System.out.println(meta.getColumnName(i));
+        }
+    }
+
+    String[] getColumnNames() throws SQLException{
+        Statement st = connect.createStatement();
+        ResultSet rst = st.executeQuery("select * from profil limit 1");
+        ResultSetMetaData meta = rst.getMetaData();
+        String columns[] = new String[meta.getColumnCount()];
+        for(int i = 1;i <= columns.length; i++){
+            //System.out.println(meta.getColumnName(i));
+            columns[i-1] = meta.getColumnName(i);
+        }
+        return columns;
+    }
+    boolean checkColumnName(String name) throws SQLException{
+        String[] columnNames = getColumnNames();
+        return Arrays.asList(columnNames).contains(name);
     }
 }

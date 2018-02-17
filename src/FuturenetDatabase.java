@@ -6,7 +6,7 @@ class FuturenetDatabase {
     private Connection connect;
     private String getNextQuery;
 
-    FuturenetDatabase(String columnName, String order) {
+    public FuturenetDatabase(String columnName, String order) {
         try{
             connect();
             if(checkColumnName(columnName))
@@ -25,7 +25,7 @@ class FuturenetDatabase {
         }
     }
 
-    FuturenetDatabase(){
+    public FuturenetDatabase(){
         //System.setProperty("file.encoding","UTF-8");
         getNextQuery = "select label from profil where visited = 0 limit 1";
         try {
@@ -39,7 +39,7 @@ class FuturenetDatabase {
         }
     }
 
-    void connect() throws ClassNotFoundException, SQLException {
+    private void connect() throws ClassNotFoundException, SQLException {
         // This will load the MySQL driver, each DB has its own driver
         Class.forName("com.mysql.jdbc.Driver");
         // Setup the connection with the DB
@@ -120,7 +120,7 @@ class FuturenetDatabase {
         }
     }
 
-    String[] getColumnNames() throws SQLException{
+    private String[] getColumnNames() throws SQLException{
         Statement st = connect.createStatement();
         ResultSet rst = st.executeQuery("select * from profil limit 1");
         ResultSetMetaData meta = rst.getMetaData();
@@ -131,7 +131,7 @@ class FuturenetDatabase {
         }
         return columns;
     }
-    boolean checkColumnName(String name) throws SQLException{
+    private boolean checkColumnName(String name) throws SQLException{
         String[] columnNames = getColumnNames();
         return Arrays.asList(columnNames).contains(name);
     }

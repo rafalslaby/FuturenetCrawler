@@ -6,10 +6,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class FuturenetCrawler {
-    FuturenetDatabase db;
-    volatile boolean stop;
+    private FuturenetDatabase db;
+    private volatile boolean stop;
 
-    final Thread consoleListener = new Thread(){
+    private final Thread consoleListener = new Thread(){
         @Override
         public void run() {
             try {
@@ -26,11 +26,11 @@ public class FuturenetCrawler {
         }
     };
 
-    FuturenetCrawler(String column, String asc_desc){
+    public FuturenetCrawler(String column, String asc_desc){
         db = new FuturenetDatabase(column, asc_desc);
     }
 
-    void login(String login, String password){
+    public void login(String login, String password){
         try {
             HttpHandler.enableCookieStoring();
             HttpURLConnection con = (HttpURLConnection) new URL("http://kajak22.futurenet.club/postLogin")
@@ -46,7 +46,7 @@ public class FuturenetCrawler {
         }
     }
 
-    void crawl(int limit, int sleepSeconds, int sleepSecondsAfterTimeout, int maxTimeouts)
+    public void crawl(int limit, int sleepSeconds, int sleepSecondsAfterTimeout, int maxTimeouts)
     {
         consoleListener.start();
         int timeoutsCounter = 0;
@@ -103,7 +103,7 @@ public class FuturenetCrawler {
         }
     }
 
-    List<Person> pageToPersonList(String page) {
+    private List<Person> pageToPersonList(String page) {
         Pattern pattern =
                 Pattern.compile("<div class=\"name\">\\s+<a href=\".*?\" >\\s+(.*?)\\s+</a>.*?</div>",
                         Pattern.DOTALL);
